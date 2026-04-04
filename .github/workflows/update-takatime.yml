@@ -1,0 +1,38 @@
+name: Update TakaTime Stats
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download taka-report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download \
+            --repo Rtarun3606k/TakaTime \
+            --pattern "taka-report-linux-amd64" \
+            --output taka-report
+          chmod +x taka-report
+
+      - name: Generate report
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          GIST_TOKEN: ${{ github.token }}
+          TARGET_REPO: ${{ github.repository }}
+        run: ./taka-report -theme tokyonight -days=0
+
+      - name: Commit changes
+        run: |
+          git add README.md public
+          git diff --cached --quiet || git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Update TakaTime stats"
+          git push
